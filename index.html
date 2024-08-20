@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vietnamese Sentence Quiz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    .quiz-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .question {
+      margin-bottom: 20px;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .incorrect {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="quiz-container">
+    <div id="question-container">
+      <p id="question-number">Question 1 of 18</p>
+      <div id="audio-container">
+        <button id="play-audio" onclick="playAudio()">Play Audio</button>
+      </div>
+      <div class="question">
+        <label for="answer">Your Answer:</label>
+        <input type="text" id="answer" autocomplete="off">
+        <button id="submit-button" onclick="submitAnswer()">Submit</button>
+      </div>
+      <div id="feedback" class="hidden">
+        <p id="feedback-text"></p>
+        <p id="translation-text"></p>
+        <button id="next-button" onclick="nextQuestion()" class="hidden">Next</button>
+      </div>
+    </div>
+
+    <div id="summary-container" class="hidden">
+      <h2>Quiz Summary</h2>
+      <div id="summary"></div>
+      <button onclick="restartQuiz()">Restart Quiz</button>
+    </div>
+  </div>
+
+  <script>
+    const sentences = [
+      "Nhà bác Hai nuôi hai con thỏ trắng.",
+      "Đây là ấm trà ông ngoại thích.",
+      "Cô ấy không muốn trả lời anh ấy.",
+      "Học trò của lớp này rất giỏi.",
+      "Bà ngoại vẫn có trí nhớ tốt.",
+      "Mấy ông thợ đang ngồi nghỉ mệt.",
+      "Em thấy con dơi vào buổi tối.",
+      "Mẹ muốn em học bơi lội.",
+      "Quà sinh nhật của em là một cuốn sách mới.",
+      "Trời sẽ mưa ngày mai.",
+      "Hoa chưa bao giờ cỡi ngựa.",
+      "Hãy đợi cô năm phút.",
+      "Chú Bình tặng cô Hà một bó hoa hồng.",
+      "Em đã làm mất chìa khóa nhà.",
+      "Đây là những tòa nhà mới xây.",
+      "Ông hàng xóm của em là một lính cứu hỏa.",
+      "Ông ta là họa sĩ giỏi.",
+      "Cháu chúc bà ngoại khỏe mạnh và sống lâu."
+    ];
+
+    const translations = [
+      "Uncle Hai's house raises two white rabbits.",
+      "This is the teapot that grandpa likes.",
+      "She doesn't want to answer him.",
+      "The students of this class are very good.",
+      "Grandma still has a good memory.",
+      "The workers are taking a break.",
+      "I saw a bat in the evening.",
+      "Mom wants me to learn to swim.",
+      "My birthday present is a new book.",
+      "It will rain tomorrow.",
+      "Hoa has never ridden a horse.",
+      "Wait for her for five minutes.",
+      "Uncle Binh gave Ms. Ha a bouquet of roses.",
+      "I lost the house key.",
+      "These are newly built buildings.",
+      "My neighbor is a firefighter.",
+      "He is a good painter.",
+      "I wish my grandmother good health and a long life."
+    ];
+
+    let currentQuestion = 0;
+    let correctAnswers = 0;
+    let totalScore = 0;
+    let maxScore = 0;
+    const userAnswers = [];
+
+    function playAudio() {
+      const audio = new Audio(`sentence_${currentQuestion + 1}.mp3`);
+      audio.play();
+    }
+
+    function removePunctuation(str) {
+      return str.replace(/[.,!?]/g, "");
+    }
+
+    function gradeAnswer(userAnswer, correctAnswer) {
+      const userWords = userAnswer.split(" ");
+      const correctWords = correctAnswer.split(" ");
+
+      // Handle cases where the number of words doesn't match
+      if (userWords.length !== correctWords.length) {
+        const highlightedAnswer = correctWords.map(word => `<span class="incorrect">${word}</span>`).join(" ");
+        return { score: 0, highlightedAnswer };
+      }
+
+      let totalWordScore = 0;
+      let totalPossibleScore = 0;
+      let highlightedAnswer = [];
+
+      for (let i = 0; i < correctWords.length; i++) {
+        const userWord = userWords[i] || "";  // Default to empty string if userWord is undefined
+        const correctWord = correctWords[i];
+
+        let correctLetterCount = 0;
+        let highlightedWord = "";
+
+        for (let j = 0; j < correctWord.length; j++) {
+          if (userWord[j] === correctWord[j]) {
+            correctLetterCount++;
+            highlightedWord += correctWord[j];
+          } else {
+            highlightedWord += `<span class="incorrect">${correctWord[j]}</span>`;
+          }
+        }
+
+        const wordScore = correctLetterCount / correctWord.length;
+        totalWordScore += wordScore;
+        totalPossibleScore += 1;
+
+        highlightedAnswer.push(highlightedWord);
+      }
+
+      const sentenceScore = totalWordScore / totalPossibleScore;
+      return { score: sentenceScore, highlightedAnswer: highlightedAnswer.join(" ") };
+    }
+
+    function submitAnswer() {
+      // Disable the submit button after submission
+      document.getElementById("submit-button").disabled = true;
+
+      const userAnswer = removePunctuation(document.getElementById("answer").value.trim().toLowerCase());
+      const correctAnswer = removePunctuation(sentences[currentQuestion].toLowerCase());
+      const feedback = document.getElementById("feedback");
+      const feedbackText = document.getElementById("feedback-text");
+      const translationText = document.getElementById("translation-text");
+      const nextButton = document.getElementById("next-button");
+
+      const { score, highlightedAnswer } = gradeAnswer(userAnswer, correctAnswer);
+      userAnswers.push({ userAnswer, correctAnswer, score, highlightedAnswer });
+
+      totalScore += score;
+      maxScore += 1;
+
+      if (score === 1) {
+        feedbackText.textContent = "Correct!";
+      } else {
+        feedbackText.innerHTML = `Incorrect! Correct Answer: ${highlightedAnswer}`;
+      }
+
+      translationText.textContent = `Translation: ${translations[currentQuestion]}`;
+
+      feedback.classList.remove("hidden");
+      nextButton.classList.remove("hidden");
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+      if (currentQuestion < sentences.length) {
+        document.getElementById("question-number").textContent = `Question ${currentQuestion + 1} of 18`;
+        document.getElementById("answer").value = "";
+        document.getElementById("feedback").classList.add("hidden");
+        document.getElementById("next-button").classList.add("hidden");
+        document.getElementById("submit-button").disabled = false; // Enable the submit button for the next question
+        playAudio();
+      } else {
+        showSummary();
+      }
+    }
+
+    function showSummary() {
+      document.getElementById("question-container").classList.add("hidden");
+      document.getElementById("summary-container").classList.remove("hidden");
+
+      const summary = document.getElementById("summary");
+      const scorePercentage = Math.round((totalScore / maxScore) * 100);
+      summary.innerHTML = `<p>Your total score: ${scorePercentage}%</p>` + userAnswers.map((answer, index) => {
+        const correctAnswer = sentences[index];
+        const translation = translations[index];
+        return `
+          <p>Question ${index + 1}: ${correctAnswer}</p>
+          <p>Translation: ${translation}</p>
+          <p>Your answer: ${answer.userAnswer}</p>
+          <p>${answer.score === 1 ? "Correct!" : `Incorrect! Correct Answer: ${answer.highlightedAnswer}`}</p>
+          <hr>`;
+      }).join("");
+    }
+
+    function restartQuiz() {
+      currentQuestion = 0;
+      correctAnswers = 0;
+      totalScore = 0;
+      maxScore = 0;
+      userAnswers.length = 0;
+      document.getElementById("question-container").classList.remove("hidden");
+      document.getElementById("summary-container").classList.add("hidden");
+      document.getElementById("question-number").textContent = "Question 1 of 18";
+      document.getElementById("answer").value = "";
+      document.getElementById("feedback").classList.add("hidden");
+      document.getElementById("next-button").classList.add("hidden");
+      document.getElementById("submit-button").disabled = false; // Enable the submit button when restarting
+      playAudio();
+    }
+
+    window.onload = function () {
+      playAudio();
+    }
+  </script>
+</body>
+
+</html>
